@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SarcoMeta Explorer</title>
+<meta name="description" content="Interactive explorer of a multi-cohort RNA-seq meta-analysis of sarcopenia, ageing and disuse in human skeletal muscle: gene look-up, forest plots, pathways, cell composition and mouse comparison.">
+<meta property="og:title" content="SarcoMeta Explorer">
+<meta property="og:description" content="Gene- and pathway-level results of a human skeletal muscle meta-analysis of sarcopenia, ageing and disuse (17 RNA-seq cohorts, 677 samples).">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column; header with stats, tabbed views below, data tables scroll inside their own frames. */
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #18202b; --muted: #5b6676; --line: #dde2e9; --soft: #eef1f5;
+  --accent: #1f5f8b; --sarc: #8e4585; --age: #2c7fb8; --dis: #d95f02;
+  --up: #b83b3b; --down: #2c5fa8; --mid: #f3f4f6;
+  --display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11161d; --panel: #18202a; --ink: #e6ebf1; --muted: #9aa6b5; --line: #2a3442; --soft: #1f2934;
+  --accent: #7fb6dc; --sarc: #d18bc6; --age: #6fb3e3; --dis: #f2914a; --up: #e37b7b; --down: #7fa6e6; --mid: #232c37; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11161d; --panel: #18202a; --ink: #e6ebf1; --muted: #9aa6b5; --line: #2a3442; --soft: #1f2934;
+  --accent: #7fb6dc; --sarc: #d18bc6; --age: #6fb3e3; --dis: #f2914a; --up: #e37b7b; --down: #7fa6e6; --mid: #232c37; color-scheme: dark }
+* { box-sizing: border-box }
+html { -webkit-text-size-adjust: 100% }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.5 }
+[hidden] { display: none !important }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px }
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; border-bottom: 1px solid var(--line); padding-bottom: 14px }
+h1 { font-family: var(--display); font-weight: 400; font-size: 2.4rem; line-height: 1; margin: 0; letter-spacing: 0.01em }
+h1 span { color: var(--muted) }
+.lede { color: var(--muted); max-width: 62ch; margin: 6px 0 0 }
+.right { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap }
+.stats { display: flex; gap: 18px; font-family: var(--mono); font-size: 12px; color: var(--muted) }
+.stats b { display: block; font-family: var(--body); font-size: 18px; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums }
+.iconbtn { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 5px 10px; border-radius: 999px; cursor: pointer }
+nav.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 16px 0 18px }
+nav.tabs button { font: inherit; font-weight: 500; border: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 7px 14px; border-radius: 999px; cursor: pointer }
+nav.tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg) }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.searchbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px }
+input[type=search], select { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 8px 12px; border-radius: 8px; min-width: 0; max-width: 100% }
+#gene-input { width: min(320px, 100%); font-family: var(--mono) }
+.hint { color: var(--muted); font-size: 12.5px }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip, .btn { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 4px 10px; border-radius: 6px; cursor: pointer }
+.chip { font-family: var(--mono) }
+.chip:hover, .btn:hover { border-color: var(--accent) }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600 }
+.genehead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 12px }
+.genehead h2 { font-family: var(--mono); font-size: 1.6rem; margin: 0; font-weight: 500 }
+.pill { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--soft); color: var(--muted); border: 1px solid var(--line) }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 760px) { .cards { grid-template-columns: minmax(0, 1fr) } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; border-top: 3px solid var(--c) }
+.card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--c); text-transform: uppercase; letter-spacing: 0.06em }
+.card .big { font-family: var(--mono); font-size: 22px; font-variant-numeric: tabular-nums }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12.5px; color: var(--muted); margin-top: 6px }
+.kv span:nth-child(even) { color: var(--ink); font-family: var(--mono); text-align: right }
+.sig { font-weight: 600; color: var(--ink) }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 14px }
+.panel h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600 }
+.panel p.note { margin: 6px 0 0; color: var(--muted); font-size: 12.5px }
+.scroll { overflow-x: auto }
+svg text { font-family: var(--body); fill: var(--ink) }
+svg .muted { fill: var(--muted) }
+table { border-collapse: collapse; width: 100%; font-size: 13px }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap }
+th { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel) }
+td.num { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums }
+td.heat { font-family: var(--mono); text-align: center; font-size: 12px; min-width: 64px }
+tr.click { cursor: pointer } tr.click:hover td { background: var(--soft) }
+.tablebox { max-height: 70vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel) }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr) } }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 8px }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px }
+a { color: var(--accent) }
+.loading { padding: 40px 0; color: var(--muted) }
+.prose { max-width: 78ch }
+.prose h3 { font-family: var(--display); font-weight: 400; font-size: 1.5rem; margin: 22px 0 6px }
+.prose p, .prose li { color: var(--ink) }
+.prose ul { padding-left: 20px }
+.cite { font-family: var(--mono); font-size: 12.5px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; word-break: break-word }
+.dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px }
+.dl .panel { margin-top: 0; display: flex; flex-direction: column; gap: 8px }
+.dl .panel p { margin: 0; color: var(--muted); font-size: 12.5px; flex: 1 }
+footer { margin-top: 32px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; max-width: 90ch }
+@media (max-width: 520px) { h1 { font-size: 2rem } .stats { gap: 12px } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>SarcoMeta <span>Explorer</span></h1>
+      <p class="lede">Human skeletal muscle transcriptome meta-analysis of sarcopenia, ageing and disuse in older adults. Look up a gene, rank genes and pathways, and compare cell composition across 17 RNA-seq cohorts.</p>
+    </div>
+    <div class="right">
+      <div class="stats" id="stats"><div><b>17</b>cohorts</div><div><b>677</b>samples</div><div><b id="ngenes">–</b>genes</div></div>
+      <button class="iconbtn" id="theme" type="button" aria-label="Switch colour theme">Theme</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button role="tab" data-tab="gene" aria-selected="true">Gene</button>
+    <button role="tab" data-tab="top" aria-selected="false">Top genes</button>
+    <button role="tab" data-tab="pathways" aria-selected="false">Pathways</button>
+    <button role="tab" data-tab="composition" aria-selected="false">Cell composition</button>
+    <button role="tab" data-tab="datasets" aria-selected="false">Datasets</button>
+    <button role="tab" data-tab="download" aria-selected="false">Download</button>
+    <button role="tab" data-tab="about" aria-selected="false">About &amp; cite</button>
+  </nav>
+
+  <div id="loading" class="loading">Loading data (about 6.7 MB, 1–2 MB compressed)…</div>
+
+  <section id="view-gene" hidden>
+    <div class="searchbar">
+      <input type="search" id="gene-input" list="gene-list" placeholder="Gene symbol, e.g. NOS1" autocomplete="off" aria-label="Gene symbol">
+      <datalist id="gene-list"></datalist>
+      <div class="chips" id="examples"></div>
+    </div>
+    <div id="gene-out"></div>
+  </section>
+
+  <section id="view-top" hidden>
+    <div class="searchbar">
+      <select id="top-contrast" aria-label="Contrast">
+        <option value="sarc">Sarcopenia (vs non-sarcopenic old)</option>
+        <option value="age">Ageing (old vs young)</option>
+        <option value="dis">Disuse in older adults (post vs pre)</option>
+        <option value="diff_sarc_age">Sarcopenia minus ageing</option>
+        <option value="diff_sarc_dis">Sarcopenia minus disuse</option>
+        <option value="diff_dis_age">Disuse minus ageing</option>
+      </select>
+      <select id="top-dir" aria-label="Direction"><option value="both">Up and down</option><option value="up">Up only</option><option value="down">Down only</option></select>
+      <input type="search" id="top-filter" placeholder="Filter genes" aria-label="Filter genes">
+      <button class="btn" id="top-dl" type="button">Download list (CSV)</button>
+      <span class="hint" id="top-count"></span>
+    </div>
+    <div class="tablebox scroll"><table id="top-table"></table></div>
+    <p class="hint">Ranked by meta-analysis z (random effects). Click a row to open the gene. The download contains every gene that matches the current filters, not only the top 200. Sarcopenia has only one gene at FDR &lt; 0.05; its ranking is best read at pathway level.</p>
+  </section>
+
+  <section id="view-pathways" hidden>
+    <div class="searchbar">
+      <select id="pw-coll" aria-label="Collection"><option value="hallmark">Hallmark</option><option value="reactome">Reactome</option><option value="kegg">KEGG</option><option value="go_bp">GO biological process</option></select>
+      <input type="search" id="pw-filter" placeholder="Filter pathways, e.g. interferon" aria-label="Filter pathways">
+      <button class="btn" id="pw-dl" type="button">Download list (CSV)</button>
+      <span class="hint" id="pw-count"></span>
+    </div>
+    <div class="tablebox scroll"><table id="pw-table"></table></div>
+    <div class="legend"><span><i style="background:var(--down)"></i>lower (negative NES)</span><span><i style="background:var(--up)"></i>higher (positive NES)</span><span><b>bold</b> = padj &lt; 0.05</span></div>
+    <p class="hint">fgsea on meta-analysis z-scores. The two difference columns test whether a pathway changes more or less in sarcopenia than in ageing or in disuse.</p>
+  </section>
+
+  <section id="view-composition" hidden>
+    <div id="comp-out"></div>
+  </section>
+
+  <section id="view-datasets" hidden>
+    <div class="tablebox scroll"><table id="ds-table"></table></div>
+    <p class="hint">Sarcopenia definitions differ by cohort (EWGSOP-type criteria, frailty, or lean-mass loss). Disuse cohorts are bed rest or reduced steps in older adults. All data are public (GEO); raw counts from ARCHS4 or NCBI.</p>
+  </section>
+
+  <section id="view-download" hidden>
+    <div class="dl">
+      <div class="panel"><h4>Gene-level meta-analysis</h4><p>All genes: log2FC, SE, z, FDR, I², number of cohorts and composition-adjusted z for sarcopenia, ageing and disuse; between-condition difference tests; mouse log2FC, z and FDR.</p><button class="btn primary" data-dl="genes" type="button">Download CSV</button></div>
+      <div class="panel"><h4>Per-cohort effects</h4><p>log2FC and SE for every gene in each of the 17 cohorts (wide format, one row per gene). About 3 MB.</p><button class="btn primary" data-dl="cohorts" type="button">Download CSV</button></div>
+      <div class="panel"><h4>Pathway enrichment</h4><p>fgsea NES and adjusted p for Hallmark, Reactome, KEGG and GO:BP across the three conditions and two difference contrasts.</p><button class="btn primary" data-dl="pathways" type="button">Download CSV</button></div>
+      <div class="panel"><h4>Cell composition</h4><p>Pooled and per-cohort differences in estimated cell-type proportions (FibeRtypeR and Kedlian-atlas NNLS).</p><button class="btn primary" data-dl="composition" type="button">Download CSV</button></div>
+      <div class="panel"><h4>Cohorts</h4><p>The 17 cohorts with condition, contrast, group sizes and GEO accession.</p><button class="btn primary" data-dl="datasets" type="button">Download CSV</button></div>
+      <div class="panel"><h4>Raw data files (JSON)</h4><p>The exact files this site reads, for programmatic use.</p><p><a href="data/meta.json" download>meta.json</a> · <a href="data/studies.json" download>studies.json</a> · <a href="data/pathways.json" download>pathways.json</a> · <a href="data/composition.json" download>composition.json</a></p></div>
+    </div>
+    <p class="hint">Files are generated in your browser from the same data shown on the site. Missing values are left empty.</p>
+  </section>
+
+  <section id="view-about" hidden>
+    <div class="prose">
+      <h3>What this is</h3>
+      <p>SarcoMeta Explorer is the companion resource of a systematic review and meta-analysis of human skeletal muscle bulk RNA-seq. It pools 17 public cohorts (677 samples) into three contrasts:</p>
+      <ul>
+        <li><b style="color:var(--sarc)">Sarcopenia</b>: sarcopenic or frail vs non-sarcopenic older adults (6 cohorts; 113 cases, 141 controls).</li>
+        <li><b style="color:var(--age)">Ageing</b>: healthy old vs young (7 cohorts; 199 old, 144 young).</li>
+        <li><b style="color:var(--dis)">Disuse in older adults</b>: after vs before bed rest or reduced activity, paired (4 cohorts; 40 participants).</li>
+      </ul>
+      <p>Results are compared with a meta-analysis of public mouse ageing and disuse datasets.</p>
+      <h3>Methods in brief</h3>
+      <p>Raw counts were uniformly re-processed (ARCHS4, or NCBI GEO raw counts where ARCHS4 lacked samples). Each cohort was analysed with limma-voom (TMM normalisation; paired designs for disuse; sex as a covariate where it varies). Genes were pooled by random-effects meta-analysis (REML). Between-condition differences use z = (b₁ − b₂)/√(se₁² + se₂²). Pathways were tested with fgsea on meta-analysis z-scores. The composition-adjusted z includes FibeRtypeR slow-fibre proportion and Kedlian-atlas estimates of FAPs, adipocytes, endothelial and myeloid cells as covariates. Mouse z values come from a meta-analysis of public mouse bulk RNA-seq using one-to-one orthologs.</p>
+      <p>An independent re-analysis from the raw files (new code; DESeq2 and limma-voom) reproduced the meta-analysis z-scores (Spearman ρ 0.97–1.00) and the main pathway findings.</p>
+      <h3>How to cite</h3>
+      <div class="cite" id="cite-text">Dalle S. Sarcopenia, ageing and disuse in human skeletal muscle: a multi-cohort RNA-seq meta-analysis. Manuscript in preparation (2026). SarcoMeta Explorer, version 1.0. <span id="cite-url"></span></div>
+      <p><button class="btn" id="cite-copy" type="button">Copy citation</button></p>
+      <h3>Data and licence</h3>
+      <p>All input data are public (NCBI GEO). The accessions are listed under <a href="#datasets">Datasets</a>. The summary results on this site may be reused with attribution.</p>
+      <h3>Caveat</h3>
+      <p>This is an exploratory resource accompanying a manuscript that has not yet been peer reviewed. Sarcopenia shows few individual genes at FDR &lt; 0.05 and is best interpreted at pathway level. Interferon findings depend on single cohorts. Endothelial and immune composition estimates are method-dependent.</p>
+      <h3>Contact</h3>
+      <p>Sebastiaan Dalle, University of Antwerp.</p>
+    </div>
+  </section>
+
+  <footer>
+    SarcoMeta Explorer v1.0 · Data release 2026-11-01 · Exploratory resource accompanying a manuscript in preparation; not peer reviewed. See <a href="#about">About &amp; cite</a>.
+  </footer>
+</div>
+
+<script>
+const C = { sarc: { name: "Sarcopenia", col: "var(--sarc)", sub: "sarcopenic vs non-sarcopenic old" },
+            age: { name: "Ageing", col: "var(--age)", sub: "old vs young" },
+            dis: { name: "Disuse (older adults)", col: "var(--dis)", sub: "post vs pre, paired" } };
+const COND = ["sarc", "age", "dis"];
+const TABS = ["gene", "top", "pathways", "composition", "datasets", "download", "about"];
+const DIFFS = ["diff_sarc_age", "diff_sarc_dis", "diff_dis_age"];
+const MOUSE = ["ageing", "disuse_adult", "disuse_aged"];
+const MK = { ageing: 4, disuse_adult: 6, disuse_aged: 1 };  // mouse cohorts per contrast
+let M, S, PW, CP, idx = new Map(), current = null;
+const $ = s => document.querySelector(s);
+const fmt = (v, d = 2) => v == null || Number.isNaN(v) ? "–" : (v > 0 ? "+" : "") + v.toFixed(d);
+const fp = v => v == null ? "–" : v < 0.001 ? v.toExponential(1) : v.toPrecision(2);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function heat(v, max = 3) {
+  if (v == null) return "transparent";
+  const t = Math.max(-1, Math.min(1, v / max)), a = Math.round(Math.abs(t) * 85);
+  return `color-mix(in srgb, ${t < 0 ? "var(--down)" : "var(--up)"} ${a}%, var(--mid))`;
+}
+
+// ---------- theme ----------
+(() => {
+  const root = document.documentElement;
+  let saved = null; try { saved = localStorage.getItem("sme-theme") } catch (e) {}
+  if (saved) root.dataset.theme = saved;
+  $("#theme").addEventListener("click", () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("sme-theme", root.dataset.theme) } catch (e) {}
+  });
+})();
+
+// ---------- CSV ----------
+function csvCell(v) {
+  if (v == null || (typeof v === "number" && Number.isNaN(v))) return "";
+  const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function download(name, header, rows) {
+  const text = [header, ...rows].map(r => r.map(csvCell).join(",")).join("\n");
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+const condCols = c => ["lfc", "se", "z", "fdr", "i2", "k", "zadj"].map(f => `${c}_${f}`);
+function geneRow(i) {
+  return [M.genes[i], M.class[i], ...COND.flatMap(c => ["lfc", "se", "z", "fdr", "i2", "k", "zadj"].map(f => M[c][f][i])),
+    ...DIFFS.flatMap(d => [M[d].z[i], M[d].fdr[i]]), ...MOUSE.flatMap(m => [M.mouse[m].lfc[i], M.mouse[m].z[i], M.mouse[m].fdr[i]])];
+}
+const geneHeader = () => ["gene", "class", ...COND.flatMap(condCols), ...DIFFS.flatMap(d => [`${d}_z`, `${d}_fdr`]), ...MOUSE.flatMap(m => [`mouse_${m}_lfc`, `mouse_${m}_z`, `mouse_${m}_fdr`])];
+const PWCOLS = ["sarcopenia", "ageing", "disuse", "zdiff_sarc_age", "zdiff_sarc_dis"];
+const pwHeader = ["pathway", "collection", ...PWCOLS.flatMap(c => [`NES_${c}`, `padj_${c}`])];
+const pwRow = i => [PW.pathway[i], PW.collection[i], ...PWCOLS.flatMap(c => [PW["NES_" + c][i], PW["padj_" + c][i]])];
+const DL = {
+  genes: () => download("sarcometa_gene_meta.csv", geneHeader(), M.genes.map((_, i) => geneRow(i))),
+  cohorts: () => download("sarcometa_per_cohort.csv", ["gene", ...S.flatMap(s => [`${s.id}_lfc`, `${s.id}_se`])], M.genes.map((g, i) => [g, ...S.flatMap(s => [s.lfc[i], s.se[i]])])),
+  pathways: () => download("sarcometa_pathways.csv", pwHeader, PW.pathway.map((_, i) => pwRow(i))),
+  composition: () => download("sarcometa_composition.csv", ["level", "cohort", "condition", "cell_type", "method", "diff", "se", "p", "padj", "k", "I2"],
+    [...CP.meta.map(m => ["pooled", "", m.condition, m.type, m.method, m.diff, m.se, m.p, m.padj, m.k, m.I2]),
+     ...CP.study.map(m => ["cohort", m.analysis, m.condition, m.type, m.method, m.diff, m.se, "", "", "", ""])]),
+  datasets: () => download("sarcometa_cohorts.csv", ["cohort", "condition", "contrast", "n_case", "n_control", "GEO"], S.map(s => [s.id, C[s.cond].name, s.contrast, s.n_case, s.n_ctrl, s.gse])),
+};
+document.querySelectorAll("[data-dl]").forEach(b => b.addEventListener("click", () => M && DL[b.dataset.dl]()));
+
+// ---------- routing ----------
+function setHash(h) { try { history.replaceState(null, "", "#" + h) } catch (e) {} }
+function show(tab, keepHash) {
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  TABS.forEach(t => $("#view-" + t).hidden = t !== tab || !M);
+  if (!keepHash) setHash(tab === "gene" && current ? "gene/" + current : tab);
+}
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (h.startsWith("gene/")) { const g = h.slice(5); $("#gene-input").value = g; renderGene(g); show("gene", true); return }
+  show(TABS.includes(h) ? h : "gene", true);
+}
+window.addEventListener("hashchange", () => M && route());
+
+// ---------- gene view ----------
+function forest(i) {
+  const rows = [];
+  for (const c of COND) {
+    rows.push({ head: c });
+    S.filter(s => s.cond === c).forEach(s => rows.push({ s, lfc: s.lfc[i], se: s.se[i] }));
+    rows.push({ meta: c, lfc: M[c].lfc[i], se: M[c].se[i] });
+  }
+  const vals = rows.filter(r => r.lfc != null).flatMap(r => [r.lfc - 1.96 * r.se, r.lfc + 1.96 * r.se]);
+  let lo = Math.min(-0.25, ...vals), hi = Math.max(0.25, ...vals); const pad = (hi - lo) * 0.05; lo -= pad; hi += pad;
+  const W = 760, L = 210, R = 150, rh = 20, H = rows.length * rh + 40, x = v => L + (v - lo) / (hi - lo) * (W - L - R);
+  const step = [0.1, 0.25, 0.5, 1, 2, 5, 10].find(s => (hi - lo) / s <= 8) || 20;
+  const ticks = []; for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) ticks.push(+t.toFixed(3));
+  let y = 10, g = "";
+  for (const t of ticks) g += `<line x1="${x(t)}" x2="${x(t)}" y1="6" y2="${H - 26}" stroke="var(--line)"/><text x="${x(t)}" y="${H - 10}" font-size="11" text-anchor="middle" class="muted">${t}</text>`;
+  g += `<line x1="${x(0)}" x2="${x(0)}" y1="6" y2="${H - 26}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+  g += `<text x="${L + (W - L - R) / 2}" y="${H}" font-size="11" text-anchor="middle" class="muted">log2 fold change (95% CI)</text>`;
+  for (const r of rows) {
+    const cy = y + rh / 2;
+    if (r.head) { g += `<text x="0" y="${cy + 4}" font-size="12" font-weight="600" style="fill:${C[r.head].col}">${C[r.head].name}</text>`; }
+    else if (r.s) {
+      g += `<text x="12" y="${cy + 4}" font-size="11.5">${esc(r.s.id.replace("_", " "))}</text><text x="${L - 8}" y="${cy + 4}" font-size="11" text-anchor="end" class="muted">${r.s.n_case}/${r.s.n_ctrl}</text>`;
+      if (r.lfc != null) {
+        const w = Math.max(4, Math.min(11, 0.9 / r.se));
+        g += `<line x1="${x(r.lfc - 1.96 * r.se)}" x2="${x(r.lfc + 1.96 * r.se)}" y1="${cy}" y2="${cy}" stroke="var(--muted)"/><rect x="${x(r.lfc) - w / 2}" y="${cy - w / 2}" width="${w}" height="${w}" style="fill:${C[r.s.cond].col}"/>`;
+        g += `<text x="${W - R + 10}" y="${cy + 4}" font-size="11" font-family="var(--mono)" class="muted">${fmt(r.lfc)} [${fmt(r.lfc - 1.96 * r.se)}, ${fmt(r.lfc + 1.96 * r.se)}]</text>`;
+      } else g += `<text x="${W - R + 10}" y="${cy + 4}" font-size="11" class="muted">not expressed</text>`;
+    } else if (r.lfc != null) {
+      const a = x(r.lfc - 1.96 * r.se), b = x(r.lfc + 1.96 * r.se), m = x(r.lfc);
+      g += `<text x="12" y="${cy + 4}" font-size="11.5" font-weight="600">Meta-analysis</text><polygon points="${a},${cy} ${m},${cy - 6} ${b},${cy} ${m},${cy + 6}" style="fill:${C[r.meta].col}"/>`;
+      g += `<text x="${W - R + 10}" y="${cy + 4}" font-size="11" font-family="var(--mono)" font-weight="600">${fmt(r.lfc)} [${fmt(r.lfc - 1.96 * r.se)}, ${fmt(r.lfc + 1.96 * r.se)}]</text>`;
+    }
+    y += rh + (r.meta ? 8 : 0);
+  }
+  return `<svg viewBox="0 0 ${W} ${y + 30}" width="100%" style="min-width:620px" role="img" aria-label="Forest plot">${g}</svg>`;
+}
+
+function renderGene(sym) {
+  const i = idx.get(sym.toUpperCase());
+  const out = $("#gene-out");
+  if (i == null) { current = null; out.innerHTML = `<p class="hint">No meta-analysis result for “${esc(sym)}”. Use an HGNC symbol of a gene expressed in at least half of the cohorts.</p>`; return; }
+  const g = M.genes[i]; current = g;
+  if (!$("#view-gene").hidden || location.hash.startsWith("#gene")) setHash("gene/" + g);
+  document.title = `${g} · SarcoMeta Explorer`;
+  let cards = "";
+  for (const c of COND) {
+    const lfc = M[c].lfc[i], se = M[c].se[i], fdr = M[c].fdr[i];
+    cards += `<div class="card" style="--c:${C[c].col}"><h3>${C[c].name}</h3><div class="big">${fmt(lfc)}</div><div class="hint">log2FC, ${C[c].sub}</div>
+      <div class="kv"><span>95% CI</span><span>${lfc == null ? "–" : fmt(lfc - 1.96 * se) + " to " + fmt(lfc + 1.96 * se)}</span>
+      <span>z</span><span>${fmt(M[c].z[i])}</span><span>FDR</span><span class="${fdr < 0.05 ? "sig" : ""}">${fp(fdr)}</span>
+      <span>I² / cohorts</span><span>${M[c].i2[i] ?? "–"}% / ${M[c].k[i] ?? "–"}</span><span>z, composition-adjusted</span><span>${fmt(M[c].zadj[i])}</span></div></div>`;
+  }
+  const d = (k, lab) => `<tr><td>${lab}</td><td class="num">${fmt(M[k].z[i])}</td><td class="num ${M[k].fdr[i] < 0.05 ? "sig" : ""}">${fp(M[k].fdr[i])}</td></tr>`;
+  const mz = (k, lab) => { const m = M.mouse[k]; return `<tr><td>${lab}</td><td class="num">${fmt(m.lfc[i])}</td><td class="num">${fmt(m.z[i])}</td><td class="num ${m.fdr[i] < 0.05 ? "sig" : ""}">${fp(m.fdr[i])}</td><td class="num">${m.k[i] ?? "–"}/${MK[k]}</td><td class="num">${m.lfc[i] == null || m.k[i] < 2 ? "–" : m.i2[i] + "%"}</td></tr>` };
+  out.innerHTML = `<div class="genehead"><h2>${esc(g)}</h2><span class="pill">${esc(M.class[i].replace(/_/g, " "))}</span>
+      <a href="https://www.genecards.org/cgi-bin/carddisp.pl?gene=${encodeURIComponent(g)}" target="_blank" rel="noopener">GeneCards</a>
+      <button class="btn" id="g-link" type="button">Copy link</button><button class="btn" id="g-csv" type="button">Download gene (CSV)</button></div>
+    <div class="cards">${cards}</div>
+    <div class="panel"><h4>Per-cohort effects</h4><div class="scroll">${forest(i)}</div>
+      <p class="note">Squares: cohort estimates (size ∝ precision; n case/control at left). Diamonds: random-effects meta-analysis.</p></div>
+    <div class="two">
+      <div class="panel"><h4>Between-condition difference</h4><div class="scroll"><table><tr><th>Contrast</th><th>z</th><th>FDR</th></tr>
+        ${d("diff_sarc_age", "Sarcopenia minus ageing")}${d("diff_sarc_dis", "Sarcopenia minus disuse")}${d("diff_dis_age", "Disuse minus ageing")}</table></div>
+        <p class="note">Positive z: the gene is higher in sarcopenia (or disuse) relative to the other contrast.</p></div>
+      <div class="panel"><h4>Mouse models (meta-analysis)</h4><div class="scroll"><table><tr><th>Mouse contrast</th><th>log2FC</th><th>z</th><th>FDR</th><th>Cohorts</th><th>I²</th></tr>
+        ${mz("ageing", "Ageing")}${mz("disuse_adult", "Disuse, adult")}${mz("disuse_aged", "Disuse, aged")}</table></div>
+        <p class="note">One-to-one orthologs; random-effects meta-analysis of public mouse bulk RNA-seq (ageing 4 cohorts, adult disuse 6, aged disuse 1); FDR within each mouse contrast. “–” where the gene has no ortholog or was not measured.</p></div>
+    </div>`;
+  $("#g-link").addEventListener("click", e => {
+    const url = location.href.split("#")[0] + "#gene/" + encodeURIComponent(g);
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => e.target.textContent = "Link copied", () => prompt("Copy this link", url));
+  });
+  $("#g-csv").addEventListener("click", () => download(`sarcometa_${g}.csv`,
+    ["gene", "level", "cohort_or_contrast", "lfc", "se"],
+    [...S.map(s => [g, "cohort", s.id, s.lfc[i], s.se[i]]), ...COND.map(c => [g, "meta", C[c].name, M[c].lfc[i], M[c].se[i]])]));
+}
+$("#gene-input").addEventListener("change", e => renderGene(e.target.value.trim()));
+$("#gene-input").addEventListener("keydown", e => { if (e.key === "Enter") renderGene(e.target.value.trim()) });
+
+// ---------- top genes ----------
+function topIds() {
+  const k = $("#top-contrast").value, dir = $("#top-dir").value, f = $("#top-filter").value.trim().toUpperCase();
+  const z = M[k].z;
+  const ids = M.genes.map((_, i) => i).filter(i => z[i] != null && (dir === "both" || (dir === "up" ? z[i] > 0 : z[i] < 0)) && (!f || M.genes[i].includes(f)));
+  return ids.sort((a, b) => Math.abs(z[b]) - Math.abs(z[a]));
+}
+function renderTop() {
+  const k = $("#top-contrast").value, z = M[k].z, fdr = M[k].fdr, ids = topIds();
+  $("#top-count").textContent = `${ids.length.toLocaleString()} genes; ${ids.filter(i => fdr[i] < 0.05).length.toLocaleString()} at FDR < 0.05; showing top 200`;
+  const head = `<tr><th>Gene</th><th>z</th><th>FDR</th>${COND.map(c => `<th style="color:${C[c].col}">${C[c].name} log2FC</th>`).join("")}</tr>`;
+  $("#top-table").innerHTML = head + ids.slice(0, 200).map(i => `<tr class="click" data-g="${esc(M.genes[i])}"><td style="font-family:var(--mono)">${esc(M.genes[i])}</td>
+    <td class="num">${fmt(z[i])}</td><td class="num ${fdr[i] < 0.05 ? "sig" : ""}">${fp(fdr[i])}</td>
+    ${COND.map(c => `<td class="heat" style="background:${heat(M[c].z[i], 6)}">${fmt(M[c].lfc[i])}</td>`).join("")}</tr>`).join("");
+}
+["#top-contrast", "#top-dir"].forEach(s => $(s).addEventListener("change", renderTop));
+$("#top-filter").addEventListener("input", renderTop);
+$("#top-dl").addEventListener("click", () => download(`sarcometa_top_${$("#top-contrast").value}_${$("#top-dir").value}.csv`, geneHeader(), topIds().map(geneRow)));
+$("#top-table").addEventListener("click", e => { const tr = e.target.closest("tr[data-g]"); if (tr) { $("#gene-input").value = tr.dataset.g; renderGene(tr.dataset.g); show("gene"); window.scrollTo(0, 0) } });
+
+// ---------- pathways ----------
+const PWC = [["NES_sarcopenia", "Sarcopenia", "var(--sarc)"], ["NES_ageing", "Ageing", "var(--age)"], ["NES_disuse", "Disuse (old)", "var(--dis)"], ["NES_zdiff_sarc_age", "Sarc − ageing"], ["NES_zdiff_sarc_dis", "Sarc − disuse"]];
+function pwIds() {
+  const coll = $("#pw-coll").value, f = $("#pw-filter").value.trim().toUpperCase().replace(/\s+/g, "_");
+  const ids = PW.pathway.map((_, i) => i).filter(i => PW.collection[i] === coll && (!f || PW.pathway[i].includes(f)));
+  const minp = i => Math.min(...PWC.map(c => PW[c[0].replace("NES", "padj")][i] ?? 1));
+  return ids.sort((a, b) => minp(a) - minp(b));
+}
+function renderPw() {
+  let ids = pwIds();
+  $("#pw-count").textContent = `${ids.length.toLocaleString()} pathways${ids.length > 300 ? "; showing the 300 with the smallest padj" : ""}`;
+  ids = ids.slice(0, 300);
+  $("#pw-table").innerHTML = `<tr><th>Pathway</th>${PWC.map(c => `<th style="${c[2] ? "color:" + c[2] : ""}">${c[1]}</th>`).join("")}</tr>` +
+    ids.map(i => `<tr><td title="${esc(PW.pathway[i])}">${esc(PW.pathway[i].replace(/^(HALLMARK|REACTOME|KEGG|GOBP)_/, "").replace(/_/g, " ").toLowerCase())}</td>` +
+      PWC.map(c => { const v = PW[c[0]][i], p = PW[c[0].replace("NES", "padj")][i];
+        return `<td class="heat" style="background:${heat(v)};${p < 0.05 ? "font-weight:700" : ""}" title="padj ${fp(p)}">${v == null ? "–" : v.toFixed(2)}</td>` }).join("") + "</tr>").join("");
+}
+$("#pw-coll").addEventListener("change", renderPw); $("#pw-filter").addEventListener("input", renderPw);
+$("#pw-dl").addEventListener("click", () => download(`sarcometa_pathways_${$("#pw-coll").value}.csv`, pwHeader, pwIds().map(pwRow)));
+
+// ---------- composition ----------
+function renderComp() {
+  const types = ["Slow (type I) fibres", "FAP/fibroblast", "Adipocyte", "Endothelial", "SMC/pericyte", "Satellite cell", "Myeloid", "Lymphoid"];
+  const cn = { sarcopenia: "sarc", ageing: "age", disuse: "dis" };
+  const rows = types.map(t => ({ t, v: COND.map(c => CP.meta.find(r => r.type === t && cn[r.condition] === c)) })).filter(r => r.v.some(Boolean));
+  const panel = (sel, title, note) => {
+    const rs = rows.filter(r => sel(r.t)), vals = rs.flatMap(r => r.v.filter(Boolean).flatMap(m => [m.diff - 1.96 * m.se, m.diff + 1.96 * m.se]));
+    let lo = Math.min(0, ...vals) * 100, hi = Math.max(0, ...vals) * 100; const pd = (hi - lo) * 0.08 || 1; lo -= pd; hi += pd;
+    const W = 720, L = 170, R = 30, rh = 16, x = v => L + (v * 100 - lo) / (hi - lo) * (W - L - R);
+    let y = 8, g = "";
+    for (const r of rs) {
+      g += `<text x="0" y="${y + 26}" font-size="12">${r.t}</text>`;
+      r.v.forEach((m, j) => { const cy = y + 10 + j * rh; if (!m) return;
+        g += `<line x1="${x(m.diff - 1.96 * m.se)}" x2="${x(m.diff + 1.96 * m.se)}" y1="${cy}" y2="${cy}" style="stroke:${C[COND[j]].col}"/>` +
+             `<circle cx="${x(m.diff)}" cy="${cy}" r="4" style="fill:${m.padj < 0.05 ? C[COND[j]].col : "var(--panel)"};stroke:${C[COND[j]].col}"/>`; });
+      y += 3 * rh + 14;
+    }
+    const step = [0.1, 0.25, 0.5, 1, 2, 5, 10].find(s => (hi - lo) / s <= 8) || 20; let ax = "";
+    for (let t = Math.ceil(lo / step) * step; t <= hi; t += step) ax += `<line x1="${x(t / 100)}" x2="${x(t / 100)}" y1="0" y2="${y}" stroke="var(--line)"/><text x="${x(t / 100)}" y="${y + 14}" font-size="11" text-anchor="middle" class="muted">${+t.toFixed(2)}</text>`;
+    ax += `<line x1="${x(0)}" x2="${x(0)}" y1="0" y2="${y}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+    return `<div class="panel"><h4>${title}</h4><div class="scroll"><svg viewBox="0 0 ${W} ${y + 34}" width="100%" style="min-width:560px" role="img" aria-label="${title}">${ax}${g}
+      <text x="${L + (W - L - R) / 2}" y="${y + 32}" font-size="11" text-anchor="middle" class="muted">difference in proportion, percentage points (95% CI)</text></svg></div><p class="note">${note}</p></div>`;
+  };
+  const tbl = `<div class="panel"><h4>Pooled differences</h4><div class="scroll"><table><tr><th>Cell type</th><th>Condition</th><th>Method</th><th>Difference, pp</th><th>95% CI</th><th>padj</th><th>Cohorts</th></tr>` +
+    CP.meta.map(m => `<tr><td>${m.type}</td><td style="color:${C[cn[m.condition]].col}">${C[cn[m.condition]].name}</td><td>${m.method === "NNLS" ? "Kedlian atlas (NNLS)" : m.method}</td>
+      <td class="num">${fmt(m.diff * 100)}</td><td class="num">${fmt((m.diff - 1.96 * m.se) * 100)} to ${fmt((m.diff + 1.96 * m.se) * 100)}</td><td class="num ${m.padj < 0.05 ? "sig" : ""}">${fp(m.padj)}</td><td class="num">${m.k}</td></tr>`).join("") + `</table></div></div>`;
+  $("#comp-out").innerHTML = `<div class="legend">${COND.map(c => `<span><i style="background:${C[c].col}"></i>${C[c].name}</span>`).join("")}<span>filled = padj &lt; 0.05</span></div>` +
+    panel(t => t.startsWith("Slow"), "Fibre type (FibeRtypeR)", "Slow-fibre proportion estimated with FibeRtypeR (Van der Stede et al., J Physiol 2026). Ageing shifts biopsies towards slow fibres; sarcopenia and disuse do not.") +
+    panel(t => !t.startsWith("Slow"), "Other cell types (Kedlian 2024 single-nucleus atlas)", "Minor cell types are estimated near zero in most samples; satellite cells and smooth muscle cells were poorly estimated in validation.") + tbl;
+}
+
+// ---------- datasets ----------
+function renderDs() {
+  $("#ds-table").innerHTML = `<tr><th>Cohort</th><th>Condition</th><th>Contrast</th><th>Cases</th><th>Controls</th><th>GEO</th></tr>` +
+    S.map(s => `<tr><td style="font-family:var(--mono)">${esc(s.id.replace("_", " "))}</td><td style="color:${C[s.cond].col}">${C[s.cond].name}</td><td>${esc(s.contrast)}</td>
+      <td class="num">${s.n_case}</td><td class="num">${s.n_ctrl}</td><td><a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=${encodeURIComponent(s.gse)}" target="_blank" rel="noopener">${esc(s.gse)}</a></td></tr>`).join("");
+}
+
+// ---------- citation ----------
+(() => {
+  const url = location.protocol.startsWith("http") ? location.origin + location.pathname : "";
+  if (url) $("#cite-url").textContent = `Available at ${url} (accessed ${new Date().toISOString().slice(0, 10)}).`;
+  $("#cite-copy").addEventListener("click", e => {
+    const t = $("#cite-text").textContent.trim();
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => e.target.textContent = "Copied", () => prompt("Copy this citation", t));
+  });
+})();
+
+// ---------- boot ----------
+(async () => {
+  try {
+    [M, S, PW, CP] = await Promise.all(["meta", "studies", "pathways", "composition"].map(n => fetch(`data/${n}.json`).then(r => { if (!r.ok) throw new Error(n); return r.json() })));
+  } catch (e) {
+    $("#loading").innerHTML = location.protocol === "file:"
+      ? "The data files cannot be read when the page is opened directly from disk. Serve the folder with a local web server (see README) or open the hosted site."
+      : "The data files could not be loaded. Reload the page to try again.";
+    return;
+  }
+  M.genes.forEach((g, i) => idx.set(g, i));
+  $("#ngenes").textContent = M.genes.length.toLocaleString();
+  $("#gene-list").innerHTML = M.genes.map(g => `<option value="${esc(g)}">`).join("");
+  $("#examples").innerHTML = ["NOS1", "ADIPOQ", "PLIN5", "CDKN1A", "PRKG1", "GBP1", "MYH7"].filter(g => idx.has(g)).map(g => `<button class="chip" data-g="${g}">${g}</button>`).join("");
+  $("#examples").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (b) { $("#gene-input").value = b.dataset.g; renderGene(b.dataset.g) } });
+  $("#loading").hidden = true;
+  renderTop(); renderPw(); renderComp(); renderDs();
+  if (!location.hash.startsWith("#gene/")) { $("#gene-input").value = "NOS1"; renderGene("NOS1"); }
+  route();
+})();
+</script>
+</body>
+</html>
