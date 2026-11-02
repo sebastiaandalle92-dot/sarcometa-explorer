@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use SarcoMeta Explorer or its results, please cite the paper and this resource."
+title: "SarcoMeta Explorer"
+version: "1.0"
+date-released: 2026-11-02
+url: "https://sebastiaandalle92-dot.github.io/sarcometa-explorer/"
+repository-code: "https://github.com/sebastiaandalle92-dot/sarcometa-explorer"
+license: MIT
+authors:
+  - family-names: Dalle
+    given-names: Sebastiaan
+    affiliation: University of Antwerp
+abstract: "Interactive explorer of a human skeletal muscle RNA-seq meta-analysis of sarcopenia, ageing and disuse (17 cohorts, 677 samples)."
+keywords:
+  - sarcopenia
+  - ageing
+  - disuse
+  - skeletal muscle
+  - transcriptomics
+  - meta-analysis
+preferred-citation:
+  type: article
+  title: "Sarcopenia, ageing and disuse in human skeletal muscle: a multi-cohort RNA-seq meta-analysis"
+  authors:
+    - family-names: Dalle
+      given-names: Sebastiaan
+  year: 2026
+  notes: "Manuscript in preparation"

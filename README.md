@@ -41,4 +41,4 @@ The code is released under the MIT licence. The summary results can be reused wi
 
 ## Contact
 
-Sebastiaan Dalle, University of Antwerp. Questions, suggestions or errors: please open an issue here or contact me directly: sebastiaan.dalle@uantwerpen.be or sebastiaan.dalle@kuleuven.be
+Sebastiaan Dalle, University of Antwerp. Questions, suggestions or errors: please open an issue here or contact me directly.
