@@ -198,7 +198,7 @@ footer { margin-top: 32px; color: var(--muted); font-size: 12px; border-top: 1px
       <p>Raw counts were uniformly re-processed (ARCHS4, or NCBI GEO raw counts where ARCHS4 lacked samples). Each cohort was analysed with limma-voom (TMM normalisation; paired designs for disuse; sex as a covariate where it varies). Genes were pooled by random-effects meta-analysis (REML). Between-condition differences use z = (b₁ − b₂)/√(se₁² + se₂²). Pathways were tested with fgsea on meta-analysis z-scores. The composition-adjusted z includes FibeRtypeR slow-fibre proportion and Kedlian-atlas estimates of FAPs, adipocytes, endothelial and myeloid cells as covariates. Mouse z values come from a meta-analysis of public mouse bulk RNA-seq using one-to-one orthologs.</p>
       <p>An independent re-analysis from the raw files (new code; DESeq2 and limma-voom) reproduced the meta-analysis z-scores (Spearman ρ 0.97–1.00) and the main pathway findings.</p>
       <h3>How to cite</h3>
-      <div class="cite" id="cite-text">Dalle S. Sarcopenia, ageing and disuse in human skeletal muscle: a multi-cohort RNA-seq meta-analysis. Manuscript in preparation (2026). SarcoMeta Explorer, version 1.0. <span id="cite-url"></span></div>
+      <div class="cite" id="cite-text">Dalle S. Sarcopenia, ageing and disuse in human skeletal muscle: a multi-cohort RNA-seq meta-analysis. Manuscript in preparation (2026). SarcoMeta Explorer, version 1.0. Zenodo; 2026. https://doi.org/10.5281/zenodo.23889193</div>
       <p><button class="btn" id="cite-copy" type="button">Copy citation</button></p>
       <h3>Data and licence</h3>
       <p>All input data are public (NCBI GEO). The accessions are listed under <a href="#datasets">Datasets</a>. The summary results on this site may be reused with attribution.</p>
@@ -210,7 +210,7 @@ footer { margin-top: 32px; color: var(--muted); font-size: 12px; border-top: 1px
   </section>
 
   <footer>
-    SarcoMeta Explorer v1.0 · Data release 2026-11-01 · Exploratory resource accompanying a manuscript in preparation; not peer reviewed. See <a href="#about">About &amp; cite</a>.
+    SarcoMeta Explorer v1.0 · <a href="https://doi.org/10.5281/zenodo.23889193">doi:10.5281/zenodo.23889193</a> · Data release 2026-11-01 · Exploratory resource accompanying a manuscript in preparation; not peer reviewed. See <a href="#about">About &amp; cite</a>.
   </footer>
 </div>
 
@@ -452,8 +452,6 @@ function renderDs() {
 
 // ---------- citation ----------
 (() => {
-  const url = location.protocol.startsWith("http") ? location.origin + location.pathname : "";
-  if (url) $("#cite-url").textContent = `Available at ${url} (accessed ${new Date().toISOString().slice(0, 10)}).`;
   $("#cite-copy").addEventListener("click", e => {
     const t = $("#cite-text").textContent.trim();
     (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => e.target.textContent = "Copied", () => prompt("Copy this citation", t));

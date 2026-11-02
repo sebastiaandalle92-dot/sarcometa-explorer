@@ -1,5 +1,7 @@
 # SarcoMeta Explorer
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23889193.svg)](https://doi.org/10.5281/zenodo.23889193)
+
 SarcoMeta Explorer is the online companion to my meta-analysis of the human skeletal muscle transcriptome in sarcopenia, ageing and disuse.
 
 **Open the explorer:** https://sebastiaandalle92-dot.github.io/sarcometa-explorer/
@@ -32,6 +34,10 @@ The `data/` folder holds the summary results that the site reads.
 If you use these results, please cite:
 
 Dalle S. Sarcopenia, ageing and disuse in human skeletal muscle: a multi-cohort RNA-seq meta-analysis. Manuscript in preparation (2026).
+
+and the resource itself:
+
+Dalle S. SarcoMeta Explorer, version 1.0. Zenodo; 2026. https://doi.org/10.5281/zenodo.23889193
 
 I will update this with the journal reference once the paper is published.
 
